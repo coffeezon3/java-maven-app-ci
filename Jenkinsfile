@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     tools {
-        maven 'maven-3.9'  // exakter Name aus Jenkins
-        jdk 'jdk-17'       // exakter Name aus Jenkins
+        maven 'maven-3.9'
+        jdk 'jdk-17'
     }
 
     stages {
@@ -35,7 +35,7 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh """
                     docker build -t asdhka/annirep:${IMAGE_TAG} .
-                    echo $PASS | docker login -u $USER --password-stdin
+                    echo \$PASS | docker login -u \$USER --password-stdin
                     docker push asdhka/annirep:${IMAGE_TAG}
                     """
                 }
@@ -53,11 +53,12 @@ pipeline {
                     git config user.email "jenkins@example.com"
                     git config user.name "jenkins"
                     git add pom.xml
-                    git commit -m "Update app version to ${IMAGE_TAG}"
-                    git push https://$USER:$PASS@github.com/coffeezon3/java-maven-app-ci.git HEAD:jenkins-jobs
+                    git commit -m "Update app version to ${IMAGE_TAG}" || echo "Nothing to commit"
+                    git push https://\$USER:\$PASS@github.com/coffeezon3/java-maven-app-ci.git HEAD:jenkins-jobs
                     """
                 }
             }
         }
     }
 }
+
