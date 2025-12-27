@@ -1,6 +1,5 @@
- HEAD
-.idea/*
-target
 
-.idea/*
-starting-code
+/target/
+/*.log
+*.class
+*.xml
