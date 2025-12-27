@@ -6,17 +6,21 @@ pipeline {
     }
 
     stages {
-        stage('Hello TWN') {
+        stage('Build') {
             steps {
-                echo 'Jenkins Pipeline läuft!'
-                echo "Build Nummer: ${BUILD_NUMBER}"
+                echo 'building the application'
             }
         }
 
-        stage('Build with Maven') {
+        stage('test') {
             steps {
-                sh 'mvn --version'
-                sh 'mvn clean package'
+                sh 'testing the application'
+            }
+        }
+        
+        stage('deploy') {
+            steps {
+                echo 'deploying the application'
             }
         }
     }
