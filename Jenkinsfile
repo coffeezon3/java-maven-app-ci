@@ -1,46 +1,46 @@
 pipeline {
     agent any
+
     parameters {
-        choice(name: 'VERSION', choices:['1.1.0', '1.2.0', '1.3.0'], description:'')
-        booleanParam(name:'executeTests', defaultValue: true, description:'')
-   }
-   // environment {
-   //     NEW_VERSION = '1.3.0'
-  //      SERVER_CREDENTIALS = credentials ('server_credentials')
-  //  }
-        
+        choice(
+            name: 'VERSION',
+            choices: ['1.1.0', '1.2.0', '1.3.0'],
+            description: 'Select version to deploy'
+        )
+        booleanParam(
+            name: 'executeTests',
+            defaultValue: true,
+            description: 'Run tests or not'
+        )
+    }
 
     tools {
         maven 'maven-3.9'
     }
 
     stages {
+
         stage('Build') {
             steps {
                 echo 'building the application'
-                echo "building version ${NEW_VERSION}"
+                echo "building version ${params.VERSION}"
             }
         }
 
-        stage('test') {
-            when{
-                expression{
-                    params.executeTests
-                }     
+        stage('Test') {
+            when {
+                expression { params.executeTests }
             }
-            
             steps {
                 echo 'testing the application'
             }
         }
-        
-        stage('deploy') {
+
+        stage('Deploy') {
             steps {
                 echo 'deploying the application'
-                echo "deploying version ${params.Version}"
-                //withCredentials([
-                //    usernamePassword(credentials:'server_credentials', usernameVariable: USER, passwordVariable: PWD)
-                //    ]){
-//sh "some script" ${USER} ${PWD}"
+                echo "deploying version ${params.VERSION}"
+            }
+        }
     }
 }
