@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     tools {
-        maven 'maven-3.9'
-        jdk 'jdk-17'
+        maven 'maven-3.9'  // exakter Name aus Jenkins
+        jdk 'jdk-17'       // exakter Name aus Jenkins
     }
 
     stages {
@@ -18,9 +18,14 @@ pipeline {
         stage('Increment Version') {
             steps {
                 script {
-                    echo 'Incrementing app version...'
-                    sh 'mvn build-helper:parse-version versions:set -DnextSnapshot=false versions:commit'
-                    env.IMAGE_TAG = sh(script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout", returnStdout: true).trim() + "-${BUILD_NUMBER}"
+                    echo "Incrementing app version..."
+                    
+                    // Neue Version basierend auf BUILD_NUMBER
+                    env.NEW_VERSION = "1.1.${BUILD_NUMBER}"
+                    
+                    sh "mvn versions:set -DnewVersion=${NEW_VERSION} versions:commit"
+                    
+                    env.IMAGE_TAG = "${NEW_VERSION}-${BUILD_NUMBER}"
                     echo "IMAGE_TAG set to ${env.IMAGE_TAG}"
                 }
             }
@@ -53,8 +58,12 @@ pipeline {
                     git config user.email "jenkins@example.com"
                     git config user.name "jenkins"
                     git add pom.xml
-                    git commit -m "Update app version to ${IMAGE_TAG}" || echo "Nothing to commit"
-                    git push https://\$USER:\$PASS@github.com/coffeezon3/java-maven-app-ci.git HEAD:jenkins-jobs
+                    if ! git diff --cached --quiet; then
+                        git commit -m "Update app version to ${IMAGE_TAG}"
+                        git push https://\$USER:\$PASS@github.com/coffeezon3/java-maven-app-ci.git HEAD:jenkins-jobs
+                    else
+                        echo "No changes to commit"
+                    fi
                     """
                 }
             }
