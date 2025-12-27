@@ -32,7 +32,6 @@ pipeline {
                 script {
                     echo "building the docker image..."
                     withCredentials([usernamePassword(credentialsId: 'docker-hub-repo', passwordVariable: 'PASS', usernameVariable: 'USER')]){
-                        git remote set-url origin https://${USER}:${PASS}@github.com/coffeezon3/java-maven-app-ci.git
                         sh "docker build -t asdhka/annirep:${IMAGE_NAME} ."
                         sh 'echo $PASS | docker login -u $USER --password-stdin'
                         sh "docker push asdhka/annirep:${IMAGE_NAME}"
@@ -58,6 +57,7 @@ pipeline {
                         sh 'git branch'
                         sh 'git config --list'
                         sh 'git checkout jenkins-jobs'
+                        git remote set-url origin https://${USER}:${PASS}@github.com/coffeezon3/java-maven-app-ci.git
                         sh 'git add .'
                         sh 'git commit -m "ci: version bump"'
                         sh 'git push origin HEAD:jenkins-jobs'
