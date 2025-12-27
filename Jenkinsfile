@@ -30,3 +30,69 @@ pipeline {
                     echo 'building the application...'
                     sh 'mvn clean package'
                 }
+            }
+        }
+
+        stage('build image') {
+            steps {
+                script {
+                    echo "building the docker image..."
+                    withCredentials([usernamePassword(
+                        credentialsId: 'docker-hub-repo',
+                        passwordVariable: 'PASS',
+                        usernameVariable: 'USER'
+                    )]) {
+                        sh "docker build -t asdhka/annirep:${IMAGE_NAME} ."
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+                        sh "docker push asdhka/annirep:${IMAGE_NAME}"
+                    }
+                }
+            }
+        }
+
+        stage('deploy') {
+            steps {
+                script {
+                    echo 'deploying docker image...'
+                    // Deployment-Befehle hier ergänzen
+                }
+            }
+        }
+
+        stage('commit version update') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(
+                        credentialsId: 'github-jenkins-token',
+                        passwordVariable: 'PASS',
+                        usernameVariable: 'USER'
+                    )]) {
+
+                        // Git User konfigurieren
+                        sh 'git config --global user.email "jenkins@example.com"'
+                        sh 'git config --global user.name "jenkins"'
+
+                        // Auf Branch wechseln & Remote Änderungen einholen
+                        sh '''#!/bin/bash
+                        git checkout jenkins-jobs || git checkout -b jenkins-jobs
+                        git fetch origin jenkins-jobs
+                        git rebase origin/jenkins-jobs
+                        '''
+
+                        // Remote URL mit Credentials setzen
+                        sh "git remote set-url origin https://${USER}:${PASS}@github.com/coffeezon3/java-maven-app-ci.git"
+
+                        // Änderungen committen, nur wenn pom.xml geändert wurde
+                        sh '''#!/bin/bash
+                        git add pom.xml
+                        git diff --cached --quiet || git commit -m "ci: version bump"
+                        '''
+
+                        // Änderungen pushen
+                        sh 'git push origin jenkins-jobs'
+                    }
+                }
+            }
+        }
+    }
+}
