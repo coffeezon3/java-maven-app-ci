@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'maven:3.9.0-openjdk-8'
-            args '-u root:root' // optional, falls Schreibrechte nötig
+            args '-u root:root'
         }
     }
 
@@ -13,10 +13,7 @@ pipeline {
     stages {
         stage('Clean Workspace') {
             steps {
-                script {
-                    echo 'Cleaning workspace...'
-                    deleteDir() // löscht alles im Workspace
-                }
+                deleteDir()
             }
         }
 
@@ -31,7 +28,6 @@ pipeline {
                 script {
                     echo 'Incrementing app version...'
                     sh 'mvn build-helper:parse-version versions:set -DnextSnapshot=false versions:commit'
-                    // Lesen der neuen Version aus pom.xml
                     def version = sh(script: "mvn help:evaluate -Dexpression=project.version -q -DforceStdout", returnStdout: true).trim()
                     env.IMAGE_TAG = "${version}-${BUILD_NUMBER}"
                     echo "IMAGE_TAG set to ${env.IMAGE_TAG}"
@@ -67,12 +63,26 @@ pipeline {
             steps {
                 script {
                     echo "Deploying Docker image ${DOCKER_IMAGE}:${IMAGE_TAG}..."
-                    // Optional: Deployment Script hier
+                    // Deployment Script hier
                 }
             }
         }
 
         stage('Commit Version Update') {
             steps {
-                withCreden
+                withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    script {
+                        sh """
+                        git config user.email "jenkins@example.com"
+                        git config user.name "jenkins"
+                        git add pom.xml
+                        git commit -m "Update app version to ${IMAGE_TAG}"
+                        git push https://$USER:$PASS@github.com/coffeezon3/java-maven-app-ci.git HEAD:jenkins-jobs
+                        """
+                    }
+                }
+            }
+        }
+    }
+}
 
