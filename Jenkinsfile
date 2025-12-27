@@ -1,73 +1,140 @@
+def gv
+
+
+
 pipeline {
+
     agent any
 
     tools {
-        maven 'maven-3.9'  // exakter Name aus Jenkins
-        jdk 'jdk-17'       // exakter Name aus Jenkins
+
+        maven 'Maven'
+
     }
 
     stages {
-        stage('Clean Workspace') {
-            steps { deleteDir() }
-        }
 
-        stage('Checkout SCM') {
-            steps { checkout scm }
-        }
+        stage('increment version') {
 
-        stage('Increment Version') {
             steps {
+
                 script {
-                    echo "Incrementing app version..."
-                    
-                    // Neue Version basierend auf BUILD_NUMBER
-                    env.NEW_VERSION = "1.1.${BUILD_NUMBER}"
-                    
-                    sh "mvn versions:set -DnewVersion=${NEW_VERSION} versions:commit"
-                    
-                    env.IMAGE_TAG = "${NEW_VERSION}-${BUILD_NUMBER}"
-                    echo "IMAGE_TAG set to ${env.IMAGE_TAG}"
+
+                    echo 'incrementing app version...'
+
+                    sh 'mvn build-helper:parse-version versions:set \
+
+                        -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion} \
+
+                        versions:commit'
+
+                    def matcher = readFile('pom.xml') =~ '<version>(.+)</version>'
+
+                    def version = matcher[0][1]
+
+                    env.IMAGE_NAME = "$version-$BUILD_NUMBER"
+
                 }
+
             }
+
         }
 
-        stage('Build App') {
-            steps { sh 'mvn clean package' }
-        }
+        stage('build app') {
 
-        stage('Build & Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-hub', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh """
-                    docker build -t asdhka/annirep:${IMAGE_TAG} .
-                    echo \$PASS | docker login -u \$USER --password-stdin
-                    docker push asdhka/annirep:${IMAGE_TAG}
-                    """
+
+                script {
+
+                    echo 'building the application...'
+
+                    sh 'mvn clean package'
+
                 }
+
             }
+
         }
 
-        stage('Deploy') {
-            steps { echo "Deploying Docker image ${IMAGE_TAG}..." }
-        }
+        stage('build image') {
 
-        stage('Commit Version Update') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'github', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh """
-                    git config user.email "jenkins@example.com"
-                    git config user.name "jenkins"
-                    git add pom.xml
-                    if ! git diff --cached --quiet; then
-                        git commit -m "Update app version to ${IMAGE_TAG}"
-                        git push https://\$USER:\$PASS@github.com/coffeezon3/java-maven-app-ci.git HEAD:jenkins-jobs
-                    else
-                        echo "No changes to commit"
-                    fi
-                    """
+
+                script {
+
+                    echo "building the docker image..."
+
+                    withCredentials([usernamePassword(credentialsId: 'docker-hub-repo', passwordVariable: 'PASS', usernameVariable: 'USER')]){
+
+                        sh "docker build -t nanatwn/demo-app:${IMAGE_NAME} ."
+
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
+
+                        sh "docker push nanatwn/demo-app:${IMAGE_NAME}"
+
+
+                    }
+
                 }
+
             }
+
         }
+
+        stage('deploy') {
+
+            steps {
+
+                script {
+
+                    echo 'deploying docker image...'
+
+                }
+
+            }
+
+        }
+
+        stage('commit version update'){
+
+            steps {
+
+                script {
+
+                    withCredentials([usernamePassword(credentialsId: 'gitlab-credentials', passwordVariable: 'PASS', usernameVariable: 'USER')]){
+
+                        sh 'git config --global user.email "jenkins@example.com"'
+
+                        sh 'git config --global user.name "jenkins"'
+
+
+
+                        sh 'git status'
+
+                        sh 'git branch'
+
+                        sh 'git config --list'
+
+
+
+                        sh "git remote set-url origin https://${USER}:${PASS}@gitlab.com/twn-devops-bootcamp/latest/08-jenkins/java-maven-app.git"
+
+                        sh 'git add .'
+
+                        sh 'git commit -m "ci: version bump"'
+
+                        sh 'git push origin HEAD:jenkins-jobs'
+
+                    }
+
+                }
+
+            }
+
+         }
+
+        }
+
     }
-}
 
+}
