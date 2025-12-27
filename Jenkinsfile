@@ -66,3 +66,32 @@ pipeline {
             steps {
                 script {
                     withCredentials([usernamePassword(
+                        credentialsId: 'github-jenkins-token',
+                        usernameVariable: 'USER',
+                        passwordVariable: 'PASS'
+                    )]) {
+
+                        // Git Config
+                        sh 'git config --global user.email "jenkins@example.com"'
+                        sh 'git config --global user.name "jenkins"'
+
+                        // Auf den Branch wechseln
+                        sh 'git checkout jenkins-jobs'
+
+                        // Remote URL setzen mit Credentials
+                        sh '''
+                            git remote set-url origin https://${USER}:${PASS}@github.com/coffeezon3/java-maven-app-ci.git
+                        '''
+
+                        // Nur pom.xml committen
+                        sh 'git add pom.xml'
+                        sh 'git diff --cached --quiet || git commit -m "ci: version bump"'
+                        sh 'git push origin jenkins-jobs'
+                    }
+                }
+            }
+        }
+
+    }
+}
+
