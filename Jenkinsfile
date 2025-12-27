@@ -4,10 +4,8 @@ pipeline {
     stages {
         stage('Clean Workspace') {
             steps {
-                script {
-                    echo 'Cleaning workspace...'
-                    deleteDir() // löscht alles im Workspace
-                }
+                echo 'Cleaning workspace...'
+                deleteDir() // löscht alles im Workspace
             }
         }
 
@@ -19,16 +17,19 @@ pipeline {
 
         stage('Tool Install') {
             steps {
-                // Optional: Java, Maven etc.
+                echo 'Skipping tool install (oder hier Tool installieren)'
+                // Beispiel für Maven Tool:
+                // tool name: 'Maven 3.9.0', type: 'maven'
             }
         }
 
         stage('Increment Version') {
             steps {
                 script {
-                    echo 'incrementing app version...'
+                    echo 'Incrementing app version...'
                     sh 'mvn build-helper:parse-version versions:set -DnextSnapshot=false versions:commit'
-                    // Optional: IMAGE_NAME setzen
+                    // IMAGE_NAME setzen, falls benötigt:
+                    // env.IMAGE_NAME = "myapp-${newVersion}"
                 }
             }
         }
@@ -36,7 +37,7 @@ pipeline {
         stage('Build App') {
             steps {
                 script {
-                    echo 'building the application...'
+                    echo 'Building the application...'
                     sh 'mvn clean package'
                 }
             }
@@ -45,11 +46,12 @@ pipeline {
         stage('Build Image') {
             steps {
                 script {
-                    echo 'building the docker image...'
+                    echo 'Building Docker image...'
                     sh '''
-                        docker build -t asdhka/annirep:${IMAGE_NAME} .
-                        echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
-                        docker push asdhka/annirep:${IMAGE_NAME}
+                    docker build -t asdhka/annirep:1.1.8-PLACEHOLDER .
+                    echo "Logging into Docker..."
+                    echo $PASS | docker login -u asdhka --password-stdin
+                    docker push asdhka/annirep:1.1.8-PLACEHOLDER
                     '''
                 }
             }
@@ -57,25 +59,24 @@ pipeline {
 
         stage('Deploy') {
             steps {
-                script {
-                    echo 'deploying docker image...'
-                }
+                echo 'Deploying Docker image... (hier Deploy-Skript einfügen)'
             }
         }
 
         stage('Commit Version Update') {
             steps {
                 script {
-                    echo 'Committing version update...'
+                    echo 'Committing version update to Git...'
                     sh '''
-                        git config --global user.email "jenkins@example.com"
-                        git config --global user.name "jenkins"
-                        git add pom.xml
-                        git commit -m "Increment version by Jenkins"
-                        git push origin jenkins-jobs
+                    git config --global user.email "jenkins@example.com"
+                    git config --global user.name "jenkins"
+                    git add pom.xml
+                    git commit -m "Update version after build"
+                    git push origin jenkins-jobs
                     '''
                 }
             }
         }
     }
 }
+
