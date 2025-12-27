@@ -19,7 +19,7 @@ pipeline {
 
         stage('Tool Install') {
             steps {
-                // Dein Tool Install Code hier
+                // Optional: Java, Maven etc.
             }
         }
 
@@ -28,7 +28,7 @@ pipeline {
                 script {
                     echo 'incrementing app version...'
                     sh 'mvn build-helper:parse-version versions:set -DnextSnapshot=false versions:commit'
-                    // set IMAGE_NAME etc.
+                    // Optional: IMAGE_NAME setzen
                 }
             }
         }
@@ -46,7 +46,11 @@ pipeline {
             steps {
                 script {
                     echo 'building the docker image...'
-                    // Docker Build & Push
+                    sh '''
+                        docker build -t asdhka/annirep:${IMAGE_NAME} .
+                        echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin
+                        docker push asdhka/annirep:${IMAGE_NAME}
+                    '''
                 }
             }
         }
@@ -62,7 +66,14 @@ pipeline {
         stage('Commit Version Update') {
             steps {
                 script {
-                    // Dein git commit Schritt
+                    echo 'Committing version update...'
+                    sh '''
+                        git config --global user.email "jenkins@example.com"
+                        git config --global user.name "jenkins"
+                        git add pom.xml
+                        git commit -m "Increment version by Jenkins"
+                        git push origin jenkins-jobs
+                    '''
                 }
             }
         }
