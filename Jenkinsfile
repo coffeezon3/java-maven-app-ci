@@ -1,3 +1,5 @@
+def gv
+
 pipeline {
     agent any
 
@@ -13,13 +15,11 @@ pipeline {
                     echo 'incrementing app version...'
                     sh '''
                         mvn build-helper:parse-version versions:set \
-                        -DnewVersion=\\${parsedVersion.majorVersion}.\\${parsedVersion.minorVersion}.\\${parsedVersion.nextIncrementalVersion} \
+                        -DnewVersion=${parsedVersion.majorVersion}.${parsedVersion.minorVersion}.${parsedVersion.nextIncrementalVersion} \
                         versions:commit
                     '''
                     def matcher = readFile('pom.xml') =~ '<version>(.+)</version>'
                     def version = matcher[0][1]
-
-                    // IMAGE_NAME als ENV setzen, damit es in allen Stages verfügbar ist
                     env.IMAGE_NAME = "${version}-${BUILD_NUMBER}"
                     echo "IMAGE_NAME set to ${env.IMAGE_NAME}"
                 }
@@ -41,13 +41,12 @@ pipeline {
                     echo "building the docker image..."
                     withCredentials([usernamePassword(
                         credentialsId: 'docker-hub-repo',
-                        usernameVariable: 'USER',
-                        passwordVariable: 'PASS'
+                        passwordVariable: 'PASS',
+                        usernameVariable: 'USER'
                     )]) {
-                        // env.IMAGE_NAME verwenden
-                        sh "docker build -t asdhka/annirep:${env.IMAGE_NAME} ."
+                        sh "docker build -t asdhka/annirep:${IMAGE_NAME} ."
                         sh 'echo $PASS | docker login -u $USER --password-stdin'
-                        sh "docker push asdhka/annirep:${env.IMAGE_NAME}"
+                        sh "docker push asdhka/annirep:${IMAGE_NAME}"
                     }
                 }
             }
@@ -66,24 +65,33 @@ pipeline {
                 script {
                     withCredentials([usernamePassword(
                         credentialsId: 'github-jenkins-token',
-                        usernameVariable: 'USER',
-                        passwordVariable: 'PASS'
+                        passwordVariable: 'PASS',
+                        usernameVariable: 'USER'
                     )]) {
 
+                        // Git User konfigurieren
                         sh 'git config --global user.email "jenkins@example.com"'
                         sh 'git config --global user.name "jenkins"'
 
-                        // Sicherstellen, dass wir auf dem Branch sind
-                        sh 'git checkout jenkins-jobs'
+                        // Branch wechseln & Remote Änderungen einholen
+                        sh '''
+                            git checkout jenkins-jobs
+                            git fetch origin jenkins-jobs
+                            git rebase origin/jenkins-jobs
+                        '''
 
-                        // Git remote URL mit Token setzen
+                        // Remote URL auf Credential setzen
                         sh '''
                             git remote set-url origin https://${USER}:${PASS}@github.com/coffeezon3/java-maven-app-ci.git
                         '''
 
-                        // Nur pom.xml committen
-                        sh 'git add pom.xml'
-                        sh 'git diff --cached --quiet || git commit -m "ci: version bump"'
+                        // Änderungen committen, nur wenn pom.xml geändert wurde
+                        sh '''
+                            git add pom.xml
+                            git diff --cached --quiet || git commit -m "ci: version bump"
+                        '''
+
+                        // Änderungen pushen
                         sh 'git push origin jenkins-jobs'
                     }
                 }
