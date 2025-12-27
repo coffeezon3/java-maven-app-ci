@@ -1,5 +1,3 @@
-def gv
-
 pipeline {
     agent any
 
@@ -40,52 +38,3 @@ pipeline {
                     echo "building the docker image..."
                     withCredentials([usernamePassword(
                         credentialsId: 'docker-hub-repo',
-                        passwordVariable: 'PASS',
-                        usernameVariable: 'USER'
-                    )]) {
-                        sh "docker build -t asdhka/annirep:${IMAGE_NAME} ."
-                        sh 'echo $PASS | docker login -u $USER --password-stdin'
-                        sh "docker push asdhka/annirep:${IMAGE_NAME}"
-                    }
-                }
-            }
-        }
-
-        stage('deploy') {
-            steps {
-                script {
-                    echo 'deploying docker image...'
-                }
-            }
-        }
-
-        stage('commit version update') {
-            steps {
-                script {
-                    withCredentials([usernamePassword(
-                        credentialsId: 'github-jenkins-token',
-                        passwordVariable: 'PASS',
-                        usernameVariable: 'USER'
-                    )]) {
-
-                        sh 'git config --global user.email "jenkins@example.com"'
-                        sh 'git config --global user.name "jenkins"'
-
-                        // wichtig: weg vom detached HEAD
-                        sh 'git checkout jenkins-jobs'
-
-                        // 
-                        sh '''
-                            git remote set-url origin https://${USER}:${PASS}@github.com/coffeezon3/java-maven-app-ci.git
-                        '''
-
-                        sh 'git add pom.xml'
-                        sh 'git diff --cached --quiet || git commit -m "ci: version bump"'
-                        sh 'git push origin jenkins-jobs'
-                    }
-                }
-            }
-        }
-
-    }
-}
