@@ -1,6 +1,4 @@
-def gv
-
-pipeline {   
+pipeline {
     agent any
 
     tools {
@@ -8,36 +6,38 @@ pipeline {
     }
 
     stages {
-        stage("init") {
+
+        stage('Info') {
             steps {
-                script {
-                    gv = load "script.groovy"
-                }
+                echo "Branch: ${env.BRANCH_NAME}"
+                echo "Build number: ${env.BUILD_NUMBER}"
             }
         }
 
-        stage("build jar") {
+        stage('Build') {
             steps {
-                script {
-                    gv.buildJar()
-                }
+                sh 'mvn clean package'
             }
         }
 
-        stage("build image") {
+        stage('Test') {
+            when {
+                branch 'master'
+            }
             steps {
-                script {
-                    gv.buildImage()
-                }
+                echo 'Running tests on master branch'
+                sh 'mvn test'
             }
         }
 
-        stage("deploy") {
-            steps {
-                script {
-                    gv.deployApp()
-                }
+        stage('Deploy') {
+            when {
+                branch 'jenkins-jobs'
             }
-        }               
+            steps {
+                echo 'Deploying from jenkins-jobs branch'
+            }
+        }
     }
 }
+
