@@ -1,6 +1,6 @@
 #!/user/bin/env groovy
 @Library('jenkins-shared-library') _
-
+def gv
 
 pipeline {
     agent any
@@ -11,7 +11,7 @@ pipeline {
         stage("init") {
             steps {
                 script {
-
+                   gv = load('script.groovy')
                 }
             }
         }
