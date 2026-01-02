@@ -26,7 +26,7 @@ pipeline {
         stage("build image") {
             steps {
                 script {
-                  buildImage()
+                  buildImage 'asdhka/annirep:jma-3.0'
                 }
             }
         }
