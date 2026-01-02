@@ -23,10 +23,12 @@ pipeline {
             }
         }
 
-        stage("build image") {
+        stage("build and push image") {
             steps {
                 script {
                   buildImage 'asdhka/annirep:jma-3.0'
+                  dockerLogin()
+                  dockerPush 'asdhka/annirep:jma-3.0'
                 }
             }
         }
